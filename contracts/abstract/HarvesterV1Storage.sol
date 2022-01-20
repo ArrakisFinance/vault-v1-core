@@ -34,19 +34,19 @@ abstract contract HarvesterV1Storage is
     address public immutable arrakisTreasury;
 
     // XXXXXXXX DO NOT MODIFY ORDERING XXXXXXXX
-    bool public restricted;
     int24 public lowerTick;
     int24 public upperTick;
 
     uint16 public gelatoRebalanceBPS;
-    uint24 public gelatoMaxTwapDelta;
-    uint32 public gelatoTwapDuration;
+    uint16 public restrictedMintToggle;
+    uint16 public gelatoSlippageBPS;
+    uint32 public gelatoSlippageInterval;
 
     uint16 public managerFeeBPS;
     address public managerTreasury;
+
     uint256 public managerBalance0;
     uint256 public managerBalance1;
-
     uint256 public arrakisBalance0;
     uint256 public arrakisBalance1;
 
@@ -60,8 +60,8 @@ abstract contract HarvesterV1Storage is
         uint16 managerFeeBPS,
         address managerTreasury,
         uint16 gelatoRebalanceBPS,
-        uint24 gelatoMaxTwapDelta,
-        uint32 gelatoTwapDuration
+        uint16 gelatoSlippageBPS,
+        uint32 gelatoSlippageInterval
     );
 
     // solhint-disable-next-line max-line-length
@@ -99,9 +99,8 @@ abstract contract HarvesterV1Storage is
         _manager = _manager_;
         managerFeeBPS = _managerFeeBPS;
         managerTreasury = _manager_; // default: treasury is admin
-
-        gelatoTwapDuration = 5 minutes; // default: last five minutes;
-        gelatoMaxTwapDelta = 500; // default: 5% slippage
+        gelatoSlippageInterval = 5 minutes; // default: last five minutes;
+        gelatoSlippageBPS = 500; // default: 5% slippage
         gelatoRebalanceBPS = 200; // default: only rebalance if tx fee is lt 2% reinvested
 
         lowerTick = _lowerTick;
@@ -116,35 +115,40 @@ abstract contract HarvesterV1Storage is
     /// @param newManagerFeeBPS Basis Points of fees earned credited to manager (negative to ignore)
     /// @param newManagerTreasury address that collects manager fees (Zero address to ignore)
     /// @param newRebalanceBPS threshold fees earned for gelato rebalances (negative to ignore)
-    /// @param newMaxTwapDelta frontrun protection parameter (negative to ignore)
-    /// @param newTwapDuration frontrun protection parameter (negative to ignore)
+    /// @param newSlippageBPS frontrun protection parameter (negative to ignore)
+    /// @param newSlippageInterval frontrun protection parameter (negative to ignore)
     // solhint-disable-next-line code-complexity
     function updateAdminParams(
         int16 newManagerFeeBPS,
         address newManagerTreasury,
         int16 newRebalanceBPS,
-        int24 newMaxTwapDelta,
-        int32 newTwapDuration
+        int16 newSlippageBPS,
+        int32 newSlippageInterval
     ) external onlyManager {
         require(newRebalanceBPS <= 10000, "BPS");
+        require(newSlippageBPS <= 10000, "BPS");
         require(newManagerFeeBPS <= 10000 - int16(arrakisFeeBPS), "mBPS");
         if (newManagerFeeBPS >= 0) managerFeeBPS = uint16(newManagerFeeBPS);
         if (newRebalanceBPS >= 0) gelatoRebalanceBPS = uint16(newRebalanceBPS);
-        if (newMaxTwapDelta >= 0) gelatoMaxTwapDelta = uint24(newMaxTwapDelta);
-        if (newTwapDuration >= 0) gelatoTwapDuration = uint32(newTwapDuration);
+        if (newSlippageBPS >= 0) gelatoSlippageBPS = uint16(newSlippageBPS);
+        if (newSlippageInterval >= 0) gelatoSlippageInterval = uint32(newSlippageInterval);
         if (address(0) != newManagerTreasury)
             managerTreasury = newManagerTreasury;
         emit UpdateAdminParams(
             managerFeeBPS,
             managerTreasury,
             gelatoRebalanceBPS,
-            gelatoMaxTwapDelta,
-            gelatoTwapDuration
+            gelatoSlippageBPS,
+            gelatoSlippageInterval
         );
     }
 
-    function toggleRestrictPool() external onlyManager {
-        restricted = !restricted;
+    function toggleRestrictMint() external onlyManager {
+        if (restrictedMintToggle == 65000) {
+            restrictedMintToggle = 0;
+        } else {
+            restrictedMintToggle = 65000;
+        }
     }
 
     function renounceOwnership() public virtual override onlyManager {

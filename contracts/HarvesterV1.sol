@@ -106,8 +106,8 @@ contract HarvesterV1 is
         )
     {
         require(mintAmount > 0, "mint 0");
-        require(!restricted || msg.sender == _manager, "restricted");
-
+        require(restrictedMintToggle != 65000 || msg.sender == _manager, "restricted");
+        
         uint256 totalSupply = totalSupply();
 
         (uint160 sqrtRatioX96, , , , , , ) = pool.slot0();
@@ -303,7 +303,9 @@ contract HarvesterV1 is
         uint256 feeAmount,
         address paymentToken
     ) external gelatofy(feeAmount, paymentToken) {
-        _checkTwap();
+        if (swapAmountBPS > 0) {
+            _checkSlippage(swapThresholdPrice, zeroForOne);
+        }
         (uint128 liquidity, , , , ) = pool.positions(_getPositionID());
         _rebalance(
             liquidity,
@@ -783,23 +785,38 @@ contract HarvesterV1 is
         fee1 = rawFee1 - deduct1;
     }
 
-    function _checkTwap() internal view {
-        (, int24 tick, , , , , ) = pool.slot0();
-
+    function _checkSlippage(uint160 swapThresholdPrice, bool zeroForOne)
+        private
+        view
+    {
         uint32[] memory secondsAgo = new uint32[](2);
-        secondsAgo[0] = gelatoTwapDuration;
+        secondsAgo[0] = gelatoSlippageInterval;
         secondsAgo[1] = 0;
+
         (int56[] memory tickCumulatives, ) = pool.observe(secondsAgo);
 
-        int24 twap;
+        require(tickCumulatives.length == 2, "array len");
+        uint160 avgSqrtRatioX96;
         unchecked {
-            twap = int24(
-                (tickCumulatives[1] - tickCumulatives[0]) /
-                    int56(uint56(gelatoTwapDuration))
-            );
+            int24 avgTick =
+                int24(
+                    (tickCumulatives[1] - tickCumulatives[0]) /
+                        int56(uint56(gelatoSlippageInterval))
+                );
+            avgSqrtRatioX96 = avgTick.getSqrtRatioAtTick();
         }
 
-        int24 delta = tick > twap ? tick - twap : twap - tick;
-        require(delta <= int24(gelatoMaxTwapDelta), "frontrun protection");
+        uint160 maxSlippage = (avgSqrtRatioX96 * gelatoSlippageBPS) / 10000;
+        if (zeroForOne) {
+            require(
+                swapThresholdPrice >= avgSqrtRatioX96 - maxSlippage,
+                "high slippage"
+            );
+        } else {
+            require(
+                swapThresholdPrice <= avgSqrtRatioX96 + maxSlippage,
+                "high slippage"
+            );
+        }
     }
 }
