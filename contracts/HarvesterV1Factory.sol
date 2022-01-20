@@ -5,9 +5,11 @@ import {
     IUniswapV3Factory
 } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3TickSpacing} from "./interfaces/IUniswapV3TickSpacing.sol";
-import {IGUniFactory} from "./interfaces/IGUniFactory.sol";
-import {IGUniPoolStorage} from "./interfaces/IGUniPoolStorage.sol";
-import {GUniFactoryStorage} from "./abstract/GUniFactoryStorage.sol";
+import {IHarvesterV1Factory} from "./interfaces/IHarvesterV1Factory.sol";
+import {IHarvesterV1Storage} from "./interfaces/IHarvesterV1Storage.sol";
+import {
+    HarvesterV1FactoryStorage
+} from "./abstract/HarvesterV1FactoryStorage.sol";
 import {EIP173Proxy} from "./vendor/proxy/EIP173Proxy.sol";
 import {IEIP173Proxy} from "./interfaces/IEIP173Proxy.sol";
 import {
@@ -17,23 +19,23 @@ import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract GUniFactory is GUniFactoryStorage, IGUniFactory {
+contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     constructor(address _uniswapV3Factory)
-        GUniFactoryStorage(_uniswapV3Factory)
+        HarvesterV1FactoryStorage(_uniswapV3Factory)
     {} // solhint-disable-line no-empty-blocks
 
-    /// @notice createManagedPool creates a new instance of a G-UNI token on a specified
+    /// @notice createManagedPool creates a new instance of a Harvester on a specified
     /// UniswapV3Pool. The msg.sender is the initial manager of the pool and will
-    /// forever be associated with the G-UNI pool as it's `deployer`
+    /// forever be associated with the Harvester as it's `deployer`
     /// @param tokenA one of the tokens in the uniswap pair
     /// @param tokenB the other token in the uniswap pair
     /// @param uniFee fee tier of the uniswap pair
     /// @param managerFee proportion of earned fees that go to pool manager in Basis Points
     /// @param lowerTick initial lower bound of the Uniswap V3 position
     /// @param upperTick initial upper bound of the Uniswap V3 position
-    /// @return pool the address of the newly created G-UNI pool (proxy)
+    /// @return pool the address of the newly created Harvester (proxy)
     function createManagedPool(
         address tokenA,
         address tokenB,
@@ -56,13 +58,13 @@ contract GUniFactory is GUniFactoryStorage, IGUniFactory {
 
     /// @notice createPool creates a new instance of a G-UNI token on a specified
     /// UniswapV3Pool. Here the manager role is immediately burned, however msg.sender will still
-    /// forever be associated with the G-UNI pool as it's `deployer`
+    /// forever be associated with the Harvester as it's `deployer`
     /// @param tokenA one of the tokens in the uniswap pair
     /// @param tokenB the other token in the uniswap pair
     /// @param uniFee fee tier of the uniswap pair
     /// @param lowerTick initial lower bound of the Uniswap V3 position
     /// @param upperTick initial upper bound of the Uniswap V3 position
-    /// @return pool the address of the newly created G-UNI pool (proxy)
+    /// @return pool the address of the newly created Harvester (proxy)
     function createPool(
         address tokenA,
         address tokenB,
@@ -95,7 +97,7 @@ contract GUniFactory is GUniFactoryStorage, IGUniFactory {
 
         pool = address(new EIP173Proxy(poolImplementation, address(this), ""));
 
-        string memory name = "Gelato Uniswap LP";
+        string memory name = "Arrakis Harvester";
         try this.getTokenName(token0, token1) returns (string memory result) {
             name = result;
         } catch {} // solhint-disable-line no-empty-blocks
@@ -108,9 +110,9 @@ contract GUniFactory is GUniFactoryStorage, IGUniFactory {
             "tickSpacing mismatch"
         );
 
-        IGUniPoolStorage(pool).initialize(
+        IHarvesterV1Storage(pool).initialize(
             name,
-            "G-UNI",
+            string(abi.encodePacked("HARV-", _uint2str(index + 1))),
             uniPool,
             managerFee,
             lowerTick,
@@ -119,6 +121,7 @@ contract GUniFactory is GUniFactoryStorage, IGUniFactory {
         );
         _deployers.add(msg.sender);
         _pools[msg.sender].add(pool);
+        index += 1;
         emit PoolCreated(uniPool, manager, pool);
     }
 
@@ -142,7 +145,7 @@ contract GUniFactory is GUniFactoryStorage, IGUniFactory {
         string memory symbol0 = IERC20Metadata(token0).symbol();
         string memory symbol1 = IERC20Metadata(token1).symbol();
 
-        return _append("Gelato Uniswap ", symbol0, "/", symbol1, " LP");
+        return _append("Arrakis Harvester ", symbol0, "/", symbol1);
     }
 
     function upgradePools(address[] memory pools) external onlyManager {
@@ -170,22 +173,22 @@ contract GUniFactory is GUniFactoryStorage, IGUniFactory {
         }
     }
 
-    /// @notice isPoolImmutable checks if a certain G-UNI pool is "immutable" i.e. that the
+    /// @notice isPoolImmutable checks if a certain Harvester is "immutable" i.e. that the
     /// proxyAdmin is the zero address and thus the underlying implementation cannot be upgraded
-    /// @param pool address of the G-UNI pool
+    /// @param pool address of the Harvester
     /// @return bool signaling if pool is immutable (true) or not (false)
     function isPoolImmutable(address pool) external view returns (bool) {
         return address(0) == getProxyAdmin(pool);
     }
 
-    /// @notice getGelatoPools gets all the G-UNI pools deployed by Gelato's
-    /// default deployer address (since anyone can deploy and manage G-UNI pools)
-    /// @return list of Gelato managed G-UNI pool addresses
+    /// @notice getGelatoPools gets all the Harvesters deployed by Gelato's
+    /// default deployer address (since anyone can deploy and manage Harvesters)
+    /// @return list of Gelato managed Harvester addresses
     function getGelatoPools() external view returns (address[] memory) {
         return getPools(gelatoDeployer);
     }
 
-    /// @notice getDeployers fetches all addresses that have deployed a G-UNI pool
+    /// @notice getDeployers fetches all addresses that have deployed a Harvester
     /// @return deployers the list of deployer addresses
     function getDeployers() public view returns (address[] memory) {
         uint256 length = numDeployers();
@@ -197,9 +200,9 @@ contract GUniFactory is GUniFactoryStorage, IGUniFactory {
         return deployers;
     }
 
-    /// @notice getPools fetches all the G-UNI pool addresses deployed by `deployer`
-    /// @param deployer address that has potentially deployed G-UNI pools (can return empty array)
-    /// @return pools the list of G-UNI pool addresses deployed by `deployer`
+    /// @notice getPools fetches all the Harvester addresses deployed by `deployer`
+    /// @param deployer address that has potentially deployed Harvesters (can return empty array)
+    /// @return pools the list of Harvester addresses deployed by `deployer`
     function getPools(address deployer) public view returns (address[] memory) {
         uint256 length = numPools(deployer);
         address[] memory pools = new address[](length);
@@ -210,8 +213,8 @@ contract GUniFactory is GUniFactoryStorage, IGUniFactory {
         return pools;
     }
 
-    /// @notice numPools counts the total number of G-UNI pools in existence
-    /// @return result total number of G-UNI pools deployed
+    /// @notice numPools counts the total number of Harvesters in existence
+    /// @return result total number of Harvesters deployed
     function numPools() public view returns (uint256 result) {
         address[] memory deployers = getDeployers();
         for (uint256 i = 0; i < deployers.length; i++) {
@@ -219,25 +222,25 @@ contract GUniFactory is GUniFactoryStorage, IGUniFactory {
         }
     }
 
-    /// @notice numDeployers counts the total number of G-UNI pool deployer addresses
-    /// @return total number of G-UNI pool deployer addresses
+    /// @notice numDeployers counts the total number of Harvester deployer addresses
+    /// @return total number of Harvester deployer addresses
     function numDeployers() public view returns (uint256) {
         return _deployers.length();
     }
 
-    /// @notice numPools counts the total number of G-UNI pools deployed by `deployer`
+    /// @notice numPools counts the total number of Harvesters deployed by `deployer`
     /// @param deployer deployer address
-    /// @return total number of G-UNI pools deployed by `deployer`
+    /// @return total number of Harvesters deployed by `deployer`
     function numPools(address deployer) public view returns (uint256) {
         return _pools[deployer].length();
     }
 
     /// @notice getProxyAdmin gets the current address who controls the underlying implementation
-    /// of a G-UNI pool. For most all pools either this contract address or the zero address will
+    /// of a Harvester. For most all pools either this contract address or the zero address will
     /// be the proxyAdmin. If the admin is the zero address the pool's implementation is naturally
     /// no longer upgradable (no one owns the zero address).
-    /// @param pool address of the G-UNI pool
-    /// @return address that controls the G-UNI implementation (has power to upgrade it)
+    /// @param pool address of the Harvester
+    /// @return address that controls the Harvester implementation (has power to upgrade it)
     function getProxyAdmin(address pool) public view returns (address) {
         return IEIP173Proxy(pool).proxyAdmin();
     }
@@ -270,9 +273,34 @@ contract GUniFactory is GUniFactoryStorage, IGUniFactory {
         string memory a,
         string memory b,
         string memory c,
-        string memory d,
-        string memory e
+        string memory d
     ) internal pure returns (string memory) {
-        return string(abi.encodePacked(a, b, c, d, e));
+        return string(abi.encodePacked(a, b, c, d));
+    }
+
+    function _uint2str(uint256 _i)
+        internal
+        pure
+        returns (string memory _uintAsString)
+    {
+        if (_i == 0) {
+            return "0";
+        }
+        uint256 j = _i;
+        uint256 len;
+        while (j != 0) {
+            len++;
+            j /= 10;
+        }
+        bytes memory bstr = new bytes(len);
+        uint256 k = len;
+        while (_i != 0) {
+            k = k - 1;
+            uint8 temp = (48 + uint8(_i - (_i / 10) * 10));
+            bytes1 b1 = bytes1(temp);
+            bstr[k] = b1;
+            _i /= 10;
+        }
+        return string(bstr);
     }
 }

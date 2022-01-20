@@ -13,8 +13,8 @@ import "./lib/uniswap";
 import * as dotenv from "dotenv";
 dotenv.config({ path: __dirname + "/.env" });
 const ALCHEMY_ID = process.env.ALCHEMY_ID;
-const DEPLOYER_PK_MAINNET = process.env.DEPLOYER_PK_MAINNET;
-const DEPLOYER_PK = process.env.DEPLOYER_PK;
+const PK = process.env.PK;
+const PK_TEST = process.env.PK_TEST;
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
@@ -32,22 +32,22 @@ const config: HardhatUserConfig = {
 
   networks: {
     mainnet: {
-      accounts: DEPLOYER_PK_MAINNET ? [DEPLOYER_PK_MAINNET] : [],
+      accounts: PK ? [PK] : [],
       chainId: 1,
       url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_ID}`,
     },
     polygon: {
-      accounts: DEPLOYER_PK_MAINNET ? [DEPLOYER_PK_MAINNET] : [],
+      accounts: PK ? [PK] : [],
       chainId: 137,
       url: `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_ID}`,
     },
     optimism: {
-      accounts: DEPLOYER_PK_MAINNET ? [DEPLOYER_PK_MAINNET] : [],
+      accounts: PK ? [PK] : [],
       chainId: 10,
       url: `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_ID}`,
     },
     goerli: {
-      accounts: DEPLOYER_PK ? [DEPLOYER_PK] : [],
+      accounts: PK_TEST ? [PK_TEST] : [],
       chainId: 5,
       url: `https://eth-goerli.alchemyapi.io/v2/${ALCHEMY_ID}`,
     },

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.4;
 
-interface IGUniPoolStorage {
+interface IHarvesterV1Storage {
     function initialize(
         string memory _name,
         string memory _symbol,

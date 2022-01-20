@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-interface IGUniFactory {
+interface IHarvesterV1Factory {
     event PoolCreated(
         address indexed uniPool,
         address indexed manager,
