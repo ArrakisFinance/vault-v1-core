@@ -8,7 +8,7 @@ interface IHarvesterV1Factory {
         address indexed pool
     );
 
-    function createPool(
+    function deployStaticHarvester(
         address tokenA,
         address tokenB,
         uint24 uniFee,
@@ -16,7 +16,7 @@ interface IHarvesterV1Factory {
         int24 upperTick
     ) external returns (address pool);
 
-    function createManagedPool(
+    function deployHarvester(
         address tokenA,
         address tokenB,
         uint24 uniFee,

@@ -126,7 +126,7 @@ describe("HarvesterV1", function () {
       await user0.getAddress()
     );
 
-    await harvesterFactory.createManagedPool(
+    await harvesterFactory.deployHarvester(
       token0.address,
       token1.address,
       3000,
@@ -203,7 +203,7 @@ describe("HarvesterV1", function () {
         const decimals = await harvester.decimals();
         const symbol = await harvester.symbol();
         const name = await harvester.name();
-        expect(symbol).to.equal("HARV-1");
+        expect(symbol).to.equal("RAKIS-1");
         expect(decimals).to.equal(18);
         expect(name).to.equal("Arrakis Harvester TOKEN/TOKEN");
       });
@@ -814,7 +814,7 @@ describe("HarvesterV1", function () {
       });
       describe("factory management", function () {
         it("should create pools correctly", async function () {
-          await harvesterFactory.createPool(
+          await harvesterFactory.deployStaticHarvester(
             token0.address,
             token1.address,
             3000,
@@ -835,7 +835,7 @@ describe("HarvesterV1", function () {
             token1.address,
             "500"
           );
-          await harvesterFactory.createPool(
+          await harvesterFactory.deployStaticHarvester(
             token0.address,
             token1.address,
             500,
@@ -859,7 +859,7 @@ describe("HarvesterV1", function () {
             token1.address,
             "10000"
           );
-          await harvesterFactory.createPool(
+          await harvesterFactory.deployStaticHarvester(
             token0.address,
             token1.address,
             10000,
@@ -879,7 +879,7 @@ describe("HarvesterV1", function () {
           expect(upperTick).to.equal(600);
 
           await expect(
-            harvesterFactory.createPool(
+            harvesterFactory.deployStaticHarvester(
               token0.address,
               token1.address,
               3000,
@@ -888,7 +888,7 @@ describe("HarvesterV1", function () {
             )
           ).to.be.reverted;
           await expect(
-            harvesterFactory.createManagedPool(
+            harvesterFactory.deployHarvester(
               token0.address,
               token1.address,
               3000,
@@ -898,7 +898,7 @@ describe("HarvesterV1", function () {
             )
           ).to.be.reverted;
           await expect(
-            harvesterFactory.createPool(
+            harvesterFactory.deployStaticHarvester(
               token0.address,
               token1.address,
               10000,
@@ -907,7 +907,7 @@ describe("HarvesterV1", function () {
             )
           ).to.be.reverted;
           await expect(
-            harvesterFactory.createManagedPool(
+            harvesterFactory.deployHarvester(
               token0.address,
               token1.address,
               10000,
@@ -917,7 +917,7 @@ describe("HarvesterV1", function () {
             )
           ).to.be.reverted;
           await expect(
-            harvesterFactory.createPool(
+            harvesterFactory.deployStaticHarvester(
               token0.address,
               token1.address,
               500,
@@ -926,7 +926,7 @@ describe("HarvesterV1", function () {
             )
           ).to.be.reverted;
           await expect(
-            harvesterFactory.createManagedPool(
+            harvesterFactory.deployHarvester(
               token0.address,
               token1.address,
               500,
@@ -936,7 +936,7 @@ describe("HarvesterV1", function () {
             )
           ).to.be.reverted;
           await expect(
-            harvesterFactory.createPool(
+            harvesterFactory.deployStaticHarvester(
               token0.address,
               token1.address,
               500,
@@ -945,7 +945,7 @@ describe("HarvesterV1", function () {
             )
           ).to.be.reverted;
           await expect(
-            harvesterFactory.createManagedPool(
+            harvesterFactory.deployHarvester(
               token0.address,
               token1.address,
               500,

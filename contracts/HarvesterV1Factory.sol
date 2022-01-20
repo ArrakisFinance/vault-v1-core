@@ -26,7 +26,7 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
         HarvesterV1FactoryStorage(_uniswapV3Factory)
     {} // solhint-disable-line no-empty-blocks
 
-    /// @notice createManagedPool creates a new instance of a Harvester on a specified
+    /// @notice deployHarvester creates a new instance of a Harvester on a specified
     /// UniswapV3Pool. The msg.sender is the initial manager of the pool and will
     /// forever be associated with the Harvester as it's `deployer`
     /// @param tokenA one of the tokens in the uniswap pair
@@ -36,7 +36,7 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
     /// @param lowerTick initial lower bound of the Uniswap V3 position
     /// @param upperTick initial upper bound of the Uniswap V3 position
     /// @return pool the address of the newly created Harvester (proxy)
-    function createManagedPool(
+    function deployHarvester(
         address tokenA,
         address tokenB,
         uint24 uniFee,
@@ -45,7 +45,7 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
         int24 upperTick
     ) external override returns (address pool) {
         return
-            _createPool(
+            _deployHarvester(
                 tokenA,
                 tokenB,
                 uniFee,
@@ -56,7 +56,7 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
             );
     }
 
-    /// @notice createPool creates a new instance of a G-UNI token on a specified
+    /// @notice deployStaticHarvester creates a new instance of a Harvester on a specified
     /// UniswapV3Pool. Here the manager role is immediately burned, however msg.sender will still
     /// forever be associated with the Harvester as it's `deployer`
     /// @param tokenA one of the tokens in the uniswap pair
@@ -65,7 +65,7 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
     /// @param lowerTick initial lower bound of the Uniswap V3 position
     /// @param upperTick initial upper bound of the Uniswap V3 position
     /// @return pool the address of the newly created Harvester (proxy)
-    function createPool(
+    function deployStaticHarvester(
         address tokenA,
         address tokenB,
         uint24 uniFee,
@@ -73,7 +73,7 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
         int24 upperTick
     ) external override returns (address pool) {
         return
-            _createPool(
+            _deployHarvester(
                 tokenA,
                 tokenB,
                 uniFee,
@@ -84,7 +84,7 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
             );
     }
 
-    function _createPool(
+    function _deployHarvester(
         address tokenA,
         address tokenB,
         uint24 uniFee,
@@ -112,7 +112,7 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
 
         IHarvesterV1Storage(pool).initialize(
             name,
-            string(abi.encodePacked("HARV-", _uint2str(index + 1))),
+            string(abi.encodePacked("RAKIS-", _uint2str(index + 1))),
             uniPool,
             managerFee,
             lowerTick,
