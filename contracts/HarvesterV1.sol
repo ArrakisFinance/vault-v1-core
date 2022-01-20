@@ -107,7 +107,7 @@ contract HarvesterV1 is
     {
         require(mintAmount > 0, "mint 0");
         require(
-            restrictedMintToggle != 65000 || msg.sender == _manager,
+            restrictedMintToggle != 11111 || msg.sender == _manager,
             "restricted"
         );
 

@@ -207,6 +207,22 @@ describe("HarvesterV1", function () {
         expect(decimals).to.equal(18);
         expect(name).to.equal("Arrakis Harvester TOKEN/TOKEN");
       });
+      it("should fail with restricted manager minting", async () => {
+        const result = await harvester.getMintAmounts(
+          ethers.utils.parseEther("1"),
+          ethers.utils.parseEther("1")
+        );
+        await harvester.toggleRestrictMint();
+        await expect(
+          harvester
+            .connect(user1)
+            .mint(result.mintAmount, await user0.getAddress())
+        ).to.be.revertedWith("restricted");
+
+        await harvester
+          .connect(user0)
+          .mint(result.mintAmount, await user0.getAddress());
+      });
     });
 
     describe("onlyGelato", function () {
@@ -247,7 +263,7 @@ describe("HarvesterV1", function () {
         await expect(
           harvester
             .connect(gelato)
-            .updateAdminParams(
+            .updateManagerParams(
               -1,
               ethers.constants.AddressZero,
               300,
@@ -339,7 +355,7 @@ describe("HarvesterV1", function () {
                 )
             ).to.be.reverted;
 
-            const tx = await harvester.updateAdminParams(
+            const tx = await harvester.updateManagerParams(
               -1,
               ethers.constants.AddressZero,
               "1000",
@@ -384,7 +400,7 @@ describe("HarvesterV1", function () {
 
             const tx = await harvester
               .connect(user0)
-              .updateAdminParams(
+              .updateManagerParams(
                 -1,
                 ethers.constants.AddressZero,
                 "5000",
@@ -554,7 +570,7 @@ describe("HarvesterV1", function () {
 
           const tx = await harvester
             .connect(user0)
-            .updateAdminParams(
+            .updateManagerParams(
               -1,
               ethers.constants.AddressZero,
               "5000",
@@ -716,7 +732,7 @@ describe("HarvesterV1", function () {
           ).to.be.reverted;
           const tx = await harvester
             .connect(user0)
-            .updateAdminParams(
+            .updateManagerParams(
               -1,
               ethers.constants.AddressZero,
               "9000",
@@ -731,7 +747,7 @@ describe("HarvesterV1", function () {
           }
           await harvester
             .connect(user0)
-            .updateAdminParams("5000", await user1.getAddress(), -1, -1, -1);
+            .updateManagerParams("5000", await user1.getAddress(), -1, -1, -1);
           await harvester
             .connect(gelato)
             .rebalance(slippagePrice, 5000, true, 2, token0.address);

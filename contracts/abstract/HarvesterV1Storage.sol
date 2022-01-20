@@ -56,7 +56,7 @@ abstract contract HarvesterV1Storage is
     // APPPEND ADDITIONAL STATE VARS BELOW:
     // XXXXXXXX DO NOT MODIFY ORDERING XXXXXXXX
 
-    event UpdateAdminParams(
+    event UpdateManagerParams(
         uint16 managerFeeBPS,
         address managerTreasury,
         uint16 gelatoRebalanceBPS,
@@ -118,7 +118,7 @@ abstract contract HarvesterV1Storage is
     /// @param newSlippageBPS frontrun protection parameter (negative to ignore)
     /// @param newSlippageInterval frontrun protection parameter (negative to ignore)
     // solhint-disable-next-line code-complexity
-    function updateAdminParams(
+    function updateManagerParams(
         int16 newManagerFeeBPS,
         address newManagerTreasury,
         int16 newRebalanceBPS,
@@ -135,7 +135,7 @@ abstract contract HarvesterV1Storage is
             gelatoSlippageInterval = uint32(newSlippageInterval);
         if (address(0) != newManagerTreasury)
             managerTreasury = newManagerTreasury;
-        emit UpdateAdminParams(
+        emit UpdateManagerParams(
             managerFeeBPS,
             managerTreasury,
             gelatoRebalanceBPS,
@@ -145,10 +145,10 @@ abstract contract HarvesterV1Storage is
     }
 
     function toggleRestrictMint() external onlyManager {
-        if (restrictedMintToggle == 65000) {
+        if (restrictedMintToggle == 11111) {
             restrictedMintToggle = 0;
         } else {
-            restrictedMintToggle = 65000;
+            restrictedMintToggle = 11111;
         }
     }
 
