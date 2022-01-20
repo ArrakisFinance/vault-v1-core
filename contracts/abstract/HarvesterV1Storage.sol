@@ -131,7 +131,8 @@ abstract contract HarvesterV1Storage is
         if (newManagerFeeBPS >= 0) managerFeeBPS = uint16(newManagerFeeBPS);
         if (newRebalanceBPS >= 0) gelatoRebalanceBPS = uint16(newRebalanceBPS);
         if (newSlippageBPS >= 0) gelatoSlippageBPS = uint16(newSlippageBPS);
-        if (newSlippageInterval >= 0) gelatoSlippageInterval = uint32(newSlippageInterval);
+        if (newSlippageInterval >= 0)
+            gelatoSlippageInterval = uint32(newSlippageInterval);
         if (address(0) != newManagerTreasury)
             managerTreasury = newManagerTreasury;
         emit UpdateAdminParams(
