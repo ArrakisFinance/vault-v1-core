@@ -10,7 +10,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     hre.network.name === "optimism"
   ) {
     console.log(
-      `!! Deploying HarvesterV1Factory to ${hre.network.name}. Hit ctrl + c to abort`
+      `!! Deploying ArrakisVaultV1 to ${hre.network.name}. Hit ctrl + c to abort`
     );
     await new Promise((r) => setTimeout(r, 20000));
   }
@@ -19,9 +19,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployer } = await getNamedAccounts();
   const addresses = getAddresses(hre.network.name);
 
-  await deploy("HarvesterV1Factory", {
+  await deploy("ArrakisVaultV1", {
     from: deployer,
-    args: [addresses.UniswapV3Factory],
+    args: [addresses.Gelato, addresses.ArrakisFeeTreasury],
   });
 };
 
@@ -34,6 +34,6 @@ func.skip = async (hre: HardhatRuntimeEnvironment) => {
   return shouldSkip ? true : false;
 };
 
-func.tags = ["HarvesterV1Factory"];
+func.tags = ["ArrakisVaultV1"];
 
 export default func;

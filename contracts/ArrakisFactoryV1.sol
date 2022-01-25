@@ -5,11 +5,9 @@ import {
     IUniswapV3Factory
 } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3TickSpacing} from "./interfaces/IUniswapV3TickSpacing.sol";
-import {IHarvesterV1Factory} from "./interfaces/IHarvesterV1Factory.sol";
-import {IHarvesterV1Storage} from "./interfaces/IHarvesterV1Storage.sol";
-import {
-    HarvesterV1FactoryStorage
-} from "./abstract/HarvesterV1FactoryStorage.sol";
+import {IArrakisFactoryV1} from "./interfaces/IArrakisFactoryV1.sol";
+import {IArrakisVaultV1Storage} from "./interfaces/IArrakisVaultV1Storage.sol";
+import {ArrakisFactoryV1Storage} from "./abstract/ArrakisFactoryV1Storage.sol";
 import {EIP173Proxy} from "./vendor/proxy/EIP173Proxy.sol";
 import {IEIP173Proxy} from "./interfaces/IEIP173Proxy.sol";
 import {
@@ -19,53 +17,54 @@ import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
+contract ArrakisFactoryV1 is ArrakisFactoryV1Storage, IArrakisFactoryV1 {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     constructor(address _uniswapV3Factory)
-        HarvesterV1FactoryStorage(_uniswapV3Factory)
+        ArrakisFactoryV1Storage(_uniswapV3Factory)
     {} // solhint-disable-line no-empty-blocks
 
-    /// @notice deployHarvester creates a new instance of a Harvester on a specified
+    /// @notice deployVault creates a new instance of a Vault on a specified
     /// UniswapV3Pool. The msg.sender is the initial manager of the pool and will
-    /// forever be associated with the Harvester as it's `deployer`
+    /// forever be associated with the Vault as it's `deployer`
     /// @param tokenA one of the tokens in the uniswap pair
     /// @param tokenB the other token in the uniswap pair
     /// @param uniFee fee tier of the uniswap pair
     /// @param managerFee proportion of earned fees that go to pool manager in Basis Points
     /// @param lowerTick initial lower bound of the Uniswap V3 position
     /// @param upperTick initial upper bound of the Uniswap V3 position
-    /// @return pool the address of the newly created Harvester (proxy)
-    function deployHarvester(
+    /// @return pool the address of the newly created Vault (proxy)
+    function deployVault(
         address tokenA,
         address tokenB,
         uint24 uniFee,
+        address manager,
         uint16 managerFee,
         int24 lowerTick,
         int24 upperTick
     ) external override returns (address pool) {
         return
-            _deployHarvester(
+            _deployVault(
                 tokenA,
                 tokenB,
                 uniFee,
+                manager,
                 managerFee,
                 lowerTick,
-                upperTick,
-                msg.sender
+                upperTick
             );
     }
 
-    /// @notice deployStaticHarvester creates a new instance of a Harvester on a specified
+    /// @notice deployStaticVault creates a new instance of a Vault on a specified
     /// UniswapV3Pool. Here the manager role is immediately burned, however msg.sender will still
-    /// forever be associated with the Harvester as it's `deployer`
+    /// forever be associated with the Vault as it's `deployer`
     /// @param tokenA one of the tokens in the uniswap pair
     /// @param tokenB the other token in the uniswap pair
     /// @param uniFee fee tier of the uniswap pair
     /// @param lowerTick initial lower bound of the Uniswap V3 position
     /// @param upperTick initial upper bound of the Uniswap V3 position
-    /// @return pool the address of the newly created Harvester (proxy)
-    function deployStaticHarvester(
+    /// @return pool the address of the newly created Vault (proxy)
+    function deployStaticVault(
         address tokenA,
         address tokenB,
         uint24 uniFee,
@@ -73,44 +72,37 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
         int24 upperTick
     ) external override returns (address pool) {
         return
-            _deployHarvester(
+            _deployVault(
                 tokenA,
                 tokenB,
                 uniFee,
+                address(0),
                 0,
                 lowerTick,
-                upperTick,
-                address(0)
+                upperTick
             );
     }
 
-    function _deployHarvester(
+    function _deployVault(
         address tokenA,
         address tokenB,
         uint24 uniFee,
+        address manager,
         uint16 managerFee,
         int24 lowerTick,
-        int24 upperTick,
-        address manager
+        int24 upperTick
     ) internal returns (address pool) {
-        (address token0, address token1) = _getTokenOrder(tokenA, tokenB);
-
-        pool = address(new EIP173Proxy(poolImplementation, address(this), ""));
-
-        string memory name = "Arrakis Harvester";
-        try this.getTokenName(token0, token1) returns (string memory result) {
-            name = result;
-        } catch {} // solhint-disable-line no-empty-blocks
-
-        address uniPool =
-            IUniswapV3Factory(factory).getPool(token0, token1, uniFee);
-        require(uniPool != address(0), "uniswap pool does not exist");
-        require(
-            _validateTickSpacing(uniPool, lowerTick, upperTick),
-            "tickSpacing mismatch"
+        address uniPool;
+        string memory name;
+        (pool, uniPool, name) = _preDeploy(
+            tokenA,
+            tokenB,
+            uniFee,
+            lowerTick,
+            upperTick
         );
 
-        IHarvesterV1Storage(pool).initialize(
+        IArrakisVaultV1Storage(pool).initialize(
             name,
             string(abi.encodePacked("RAKIS-", _uint2str(index + 1))),
             uniPool,
@@ -123,6 +115,37 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
         _pools[msg.sender].add(pool);
         index += 1;
         emit PoolCreated(uniPool, manager, pool);
+    }
+
+    function _preDeploy(
+        address tokenA,
+        address tokenB,
+        uint24 uniFee,
+        int24 lowerTick,
+        int24 upperTick
+    )
+        internal
+        returns (
+            address pool,
+            address uniPool,
+            string memory name
+        )
+    {
+        (address token0, address token1) = _getTokenOrder(tokenA, tokenB);
+
+        pool = address(new EIP173Proxy(poolImplementation, address(this), ""));
+
+        name = "Arrakis Vault V1";
+        try this.getTokenName(token0, token1) returns (string memory result) {
+            name = result;
+        } catch {} // solhint-disable-line no-empty-blocks
+
+        uniPool = IUniswapV3Factory(factory).getPool(token0, token1, uniFee);
+        require(uniPool != address(0), "uniswap pool does not exist");
+        require(
+            _validateTickSpacing(uniPool, lowerTick, upperTick),
+            "tickSpacing mismatch"
+        );
     }
 
     function _validateTickSpacing(
@@ -145,7 +168,7 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
         string memory symbol0 = IERC20Metadata(token0).symbol();
         string memory symbol1 = IERC20Metadata(token1).symbol();
 
-        return _append("Arrakis Harvester ", symbol0, "/", symbol1);
+        return _append("Arrakis Vault V1 ", symbol0, "/", symbol1);
     }
 
     function upgradePools(address[] memory pools) external onlyManager {
@@ -173,9 +196,9 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
         }
     }
 
-    /// @notice isPoolImmutable checks if a certain Harvester is "immutable" i.e. that the
+    /// @notice isPoolImmutable checks if a certain Vault is "immutable" i.e. that the
     /// proxyAdmin is the zero address and thus the underlying implementation cannot be upgraded
-    /// @param pool address of the Harvester
+    /// @param pool address of the Vault
     /// @return bool signaling if pool is immutable (true) or not (false)
     function isPoolImmutable(address pool) external view returns (bool) {
         return address(0) == getProxyAdmin(pool);
@@ -183,12 +206,12 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
 
     /// @notice getGelatoPools gets all the Harvesters deployed by Gelato's
     /// default deployer address (since anyone can deploy and manage Harvesters)
-    /// @return list of Gelato managed Harvester addresses
+    /// @return list of Gelato managed Vault addresses
     function getGelatoPools() external view returns (address[] memory) {
         return getPools(gelatoDeployer);
     }
 
-    /// @notice getDeployers fetches all addresses that have deployed a Harvester
+    /// @notice getDeployers fetches all addresses that have deployed a Vault
     /// @return deployers the list of deployer addresses
     function getDeployers() public view returns (address[] memory) {
         uint256 length = numDeployers();
@@ -200,9 +223,9 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
         return deployers;
     }
 
-    /// @notice getPools fetches all the Harvester addresses deployed by `deployer`
+    /// @notice getPools fetches all the Vault addresses deployed by `deployer`
     /// @param deployer address that has potentially deployed Harvesters (can return empty array)
-    /// @return pools the list of Harvester addresses deployed by `deployer`
+    /// @return pools the list of Vault addresses deployed by `deployer`
     function getPools(address deployer) public view returns (address[] memory) {
         uint256 length = numPools(deployer);
         address[] memory pools = new address[](length);
@@ -222,8 +245,8 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
         }
     }
 
-    /// @notice numDeployers counts the total number of Harvester deployer addresses
-    /// @return total number of Harvester deployer addresses
+    /// @notice numDeployers counts the total number of Vault deployer addresses
+    /// @return total number of Vault deployer addresses
     function numDeployers() public view returns (uint256) {
         return _deployers.length();
     }
@@ -236,11 +259,11 @@ contract HarvesterV1Factory is HarvesterV1FactoryStorage, IHarvesterV1Factory {
     }
 
     /// @notice getProxyAdmin gets the current address who controls the underlying implementation
-    /// of a Harvester. For most all pools either this contract address or the zero address will
+    /// of a Vault. For most all pools either this contract address or the zero address will
     /// be the proxyAdmin. If the admin is the zero address the pool's implementation is naturally
     /// no longer upgradable (no one owns the zero address).
-    /// @param pool address of the Harvester
-    /// @return address that controls the Harvester implementation (has power to upgrade it)
+    /// @param pool address of the Vault
+    /// @return address that controls the Vault implementation (has power to upgrade it)
     function getProxyAdmin(address pool) public view returns (address) {
         return IEIP173Proxy(pool).proxyAdmin();
     }

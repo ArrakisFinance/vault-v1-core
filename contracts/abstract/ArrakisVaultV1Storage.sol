@@ -18,7 +18,7 @@ import {
 /// @dev Add all inherited contracts with state vars here: APPEND ONLY
 /// @dev ERC20Upgradable Includes Initialize
 // solhint-disable-next-line max-states-count
-abstract contract HarvesterV1Storage is
+abstract contract ArrakisVaultV1Storage is
     ERC20Upgradeable, /* XXXX DONT MODIFY ORDERING XXXX */
     ReentrancyGuardUpgradeable,
     OwnableUninitialized,
@@ -72,8 +72,8 @@ abstract contract HarvesterV1Storage is
     }
 
     /// @notice initialize storage variables on a new G-UNI pool, only called once
-    /// @param _name name of Harvester (immutable)
-    /// @param _symbol symbol of Harvester (immutable)
+    /// @param _name name of Vault (immutable)
+    /// @param _symbol symbol of Vault (immutable)
     /// @param _pool address of Uniswap V3 pool (immutable)
     /// @param _managerFeeBPS proportion of fees earned that go to manager treasury
     /// @param _lowerTick initial lowerTick (only changeable with executiveRebalance)

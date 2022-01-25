@@ -7,7 +7,7 @@ import {
 import {
     IUniswapV3SwapCallback
 } from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
-import {HarvesterV1Storage} from "./abstract/HarvesterV1Storage.sol";
+import {ArrakisVaultV1Storage} from "./abstract/ArrakisVaultV1Storage.sol";
 import {
     IUniswapV3Pool
 } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
@@ -22,10 +22,10 @@ import {
     LiquidityAmounts
 } from "./vendor/uniswap/LiquidityAmounts.sol";
 
-contract HarvesterV1 is
+contract ArrakisVaultV1 is
     IUniswapV3MintCallback,
     IUniswapV3SwapCallback,
-    HarvesterV1Storage
+    ArrakisVaultV1Storage
 {
     using SafeERC20 for IERC20;
     using TickMath for int24;
@@ -57,7 +57,7 @@ contract HarvesterV1 is
 
     // solhint-disable-next-line max-line-length
     constructor(address payable _gelato, address _arrakisTreasury)
-        HarvesterV1Storage(_gelato, _arrakisTreasury)
+        ArrakisVaultV1Storage(_gelato, _arrakisTreasury)
     {} // solhint-disable-line no-empty-blocks
 
     /// @notice Uniswap V3 callback fn, called back on pool.mint
@@ -88,7 +88,7 @@ contract HarvesterV1 is
 
     // User functions => Should be called via a Router
 
-    /// @notice mint HarvesterV1 Shares, fractional shares of a Uniswap V3 position/strategy
+    /// @notice mint ArrakisVaultV1 Shares, fractional shares of a Uniswap V3 position/strategy
     /// @dev to compute the amouint of tokens necessary to mint `mintAmount` see getMintAmounts
     /// @param mintAmount The number of shares to mint
     /// @param receiver The account to receive the minted shares
@@ -162,7 +162,7 @@ contract HarvesterV1 is
         emit Minted(receiver, mintAmount, amount0, amount1, liquidityMinted);
     }
 
-    /// @notice burn HarvesterV1 Shares (shares of a Uniswap V3 position) and receive underlying
+    /// @notice burn ArrakisVaultV1 Shares (shares of a Uniswap V3 position) and receive underlying
     /// @param burnAmount The number of shares to burn
     /// @param receiver The account to receive the underlying amounts of token0 and token1
     /// @return amount0 amount of token0 transferred to receiver for burning `burnAmount`

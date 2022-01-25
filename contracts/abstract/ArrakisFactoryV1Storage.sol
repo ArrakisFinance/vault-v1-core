@@ -10,7 +10,7 @@ import {
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 // solhint-disable-next-line max-states-count
-contract HarvesterV1FactoryStorage is
+contract ArrakisFactoryV1Storage is
     OwnableUninitialized, /* XXXX DONT MODIFY ORDERING XXXX */
     Initializable
     // APPEND ADDITIONAL BASE WITH STATE VARS BELOW:
