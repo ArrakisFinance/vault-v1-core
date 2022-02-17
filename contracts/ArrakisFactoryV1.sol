@@ -55,34 +55,6 @@ contract ArrakisFactoryV1 is ArrakisFactoryV1Storage, IArrakisFactoryV1 {
             );
     }
 
-    /// @notice deployStaticVault creates a new instance of a Vault on a specified
-    /// UniswapV3Pool. Here the manager role is immediately burned, however msg.sender will still
-    /// forever be associated with the Vault as it's `deployer`
-    /// @param tokenA one of the tokens in the uniswap pair
-    /// @param tokenB the other token in the uniswap pair
-    /// @param uniFee fee tier of the uniswap pair
-    /// @param lowerTick initial lower bound of the Uniswap V3 position
-    /// @param upperTick initial upper bound of the Uniswap V3 position
-    /// @return pool the address of the newly created Vault (proxy)
-    function deployStaticVault(
-        address tokenA,
-        address tokenB,
-        uint24 uniFee,
-        int24 lowerTick,
-        int24 upperTick
-    ) external override returns (address pool) {
-        return
-            _deployVault(
-                tokenA,
-                tokenB,
-                uniFee,
-                address(0),
-                0,
-                lowerTick,
-                upperTick
-            );
-    }
-
     function _deployVault(
         address tokenA,
         address tokenB,
@@ -111,8 +83,8 @@ contract ArrakisFactoryV1 is ArrakisFactoryV1Storage, IArrakisFactoryV1 {
             upperTick,
             manager
         );
-        _deployers.add(msg.sender);
-        _pools[msg.sender].add(pool);
+        _deployers.add(manager);
+        _pools[manager].add(pool);
         index += 1;
         emit PoolCreated(uniPool, manager, pool);
     }

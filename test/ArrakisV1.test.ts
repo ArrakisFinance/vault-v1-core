@@ -791,15 +791,16 @@ describe("ArrakisVaultV1", function () {
       });
       describe("factory management", function () {
         it("should create pools correctly", async function () {
-          await arrakisFactory.deployStaticVault(
+          const deployer = ethers.constants.AddressZero;
+          await arrakisFactory.deployVault(
             token0.address,
             token1.address,
             3000,
+            deployer,
+            0,
             -887220,
             887220
           );
-          const deployers = await arrakisFactory.getDeployers();
-          const deployer = deployers[0];
           let deployerPools = await arrakisFactory.getPools(deployer);
           let newPool = (await ethers.getContractAt(
             "ArrakisVaultV1",
@@ -812,10 +813,12 @@ describe("ArrakisVaultV1", function () {
             token1.address,
             "500"
           );
-          await arrakisFactory.deployStaticVault(
+          await arrakisFactory.deployVault(
             token0.address,
             token1.address,
             500,
+            ethers.constants.AddressZero,
+            0,
             -10,
             10
           );
@@ -836,10 +839,12 @@ describe("ArrakisVaultV1", function () {
             token1.address,
             "10000"
           );
-          await arrakisFactory.deployStaticVault(
+          await arrakisFactory.deployVault(
             token0.address,
             token1.address,
             10000,
+            ethers.constants.AddressZero,
+            0,
             200,
             600
           );
@@ -856,30 +861,12 @@ describe("ArrakisVaultV1", function () {
           expect(upperTick).to.equal(600);
 
           await expect(
-            arrakisFactory.deployStaticVault(
-              token0.address,
-              token1.address,
-              3000,
-              -10,
-              10
-            )
-          ).to.be.reverted;
-          await expect(
             arrakisFactory.deployVault(
               token0.address,
               token1.address,
               3000,
-              await user0.getAddress(),
+              ethers.constants.AddressZero,
               0,
-              -10,
-              10
-            )
-          ).to.be.reverted;
-          await expect(
-            arrakisFactory.deployStaticVault(
-              token0.address,
-              token1.address,
-              10000,
               -10,
               10
             )
@@ -889,47 +876,29 @@ describe("ArrakisVaultV1", function () {
               token0.address,
               token1.address,
               10000,
-              await user0.getAddress(),
+              ethers.constants.AddressZero,
               0,
               -10,
               10
             )
           ).to.be.reverted;
           await expect(
-            arrakisFactory.deployStaticVault(
-              token0.address,
-              token1.address,
-              500,
-              -5,
-              5
-            )
-          ).to.be.reverted;
-          await expect(
             arrakisFactory.deployVault(
               token0.address,
               token1.address,
               500,
-              await user0.getAddress(),
+              ethers.constants.AddressZero,
               0,
               -5,
               5
             )
           ).to.be.reverted;
           await expect(
-            arrakisFactory.deployStaticVault(
-              token0.address,
-              token1.address,
-              500,
-              100,
-              0
-            )
-          ).to.be.reverted;
-          await expect(
             arrakisFactory.deployVault(
               token0.address,
               token1.address,
               500,
-              await user0.getAddress(),
+              ethers.constants.AddressZero,
               0,
               100,
               0

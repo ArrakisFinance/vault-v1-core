@@ -8,14 +8,6 @@ interface IArrakisFactoryV1 {
         address indexed pool
     );
 
-    function deployStaticVault(
-        address tokenA,
-        address tokenB,
-        uint24 uniFee,
-        int24 lowerTick,
-        int24 upperTick
-    ) external returns (address pool);
-
     function deployVault(
         address tokenA,
         address tokenB,
