@@ -145,7 +145,7 @@ describe("ArrakisVaultV1", function () {
       pools[0]
     )) as ArrakisVaultV1;
     const arrakisFee = await vault.arrakisFeeBPS();
-    expect(arrakisFee.toString()).to.equal("500");
+    expect(arrakisFee.toString()).to.equal("250");
   });
 
   describe("Before liquidity deposited", function () {

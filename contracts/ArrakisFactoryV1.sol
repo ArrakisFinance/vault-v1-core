@@ -30,6 +30,7 @@ contract ArrakisFactoryV1 is ArrakisFactoryV1Storage, IArrakisFactoryV1 {
     /// @param tokenA one of the tokens in the uniswap pair
     /// @param tokenB the other token in the uniswap pair
     /// @param uniFee fee tier of the uniswap pair
+    /// @param manager address of the managing account
     /// @param managerFee proportion of earned fees that go to pool manager in Basis Points
     /// @param lowerTick initial lower bound of the Uniswap V3 position
     /// @param upperTick initial upper bound of the Uniswap V3 position

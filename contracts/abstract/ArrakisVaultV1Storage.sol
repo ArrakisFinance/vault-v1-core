@@ -29,7 +29,7 @@ abstract contract ArrakisVaultV1Storage is
     // solhint-disable-next-line const-name-snakecase
     string public constant version = "1.0.0";
     // solhint-disable-next-line const-name-snakecase
-    uint16 public constant arrakisFeeBPS = 500;
+    uint16 public constant arrakisFeeBPS = 250;
 
     address public immutable arrakisTreasury;
 
