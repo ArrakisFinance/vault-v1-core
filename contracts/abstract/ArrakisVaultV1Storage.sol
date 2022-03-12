@@ -30,6 +30,9 @@ abstract contract ArrakisVaultV1Storage is
     string public constant version = "1.0.0";
     // solhint-disable-next-line const-name-snakecase
     uint16 public constant arrakisFeeBPS = 250;
+    /// @dev "restricted mint enabled" toggle value must be a number
+    // above 10000 to safely avoid collisions for repurposed state var
+    uint16 public constant RESTRICTED_MINT_ENABLED = 11111;
 
     address public immutable arrakisTreasury;
 
@@ -145,10 +148,10 @@ abstract contract ArrakisVaultV1Storage is
     }
 
     function toggleRestrictMint() external onlyManager {
-        if (restrictedMintToggle == 11111) {
+        if (restrictedMintToggle == RESTRICTED_MINT_ENABLED) {
             restrictedMintToggle = 0;
         } else {
-            restrictedMintToggle = 11111;
+            restrictedMintToggle = RESTRICTED_MINT_ENABLED;
         }
     }
 

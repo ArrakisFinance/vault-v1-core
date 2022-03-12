@@ -8,9 +8,6 @@ import {
     IUniswapV3SwapCallback
 } from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
 import {ArrakisVaultV1Storage} from "./abstract/ArrakisVaultV1Storage.sol";
-import {
-    IUniswapV3Pool
-} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {TickMath} from "./vendor/uniswap/TickMath.sol";
 import {
     IERC20,
@@ -325,9 +322,7 @@ contract ArrakisVaultV1 is
         emit Rebalance(lowerTick, upperTick, liquidity, newLiquidity);
     }
 
-    /// @notice withdraw manager fees accrued, only gelato executors can call.
-    /// Target account to receive fees is managerTreasury, alterable by manager.
-    /// Frequency of withdrawals configured with gelatoWithdrawBPS, alterable by manager.
+    /// @notice withdraw manager fees accrued
     function withdrawManagerBalance() external {
         uint256 amount0 = managerBalance0;
         uint256 amount1 = managerBalance1;
@@ -344,8 +339,7 @@ contract ArrakisVaultV1 is
         }
     }
 
-    /// @notice withdraw gelato fees accrued, only gelato executors can call.
-    /// Frequency of withdrawals configured with gelatoWithdrawBPS, alterable by manager.
+    /// @notice withdraw arrakis fees accrued
     function withdrawArrakisBalance() external {
         uint256 amount0 = arrakisBalance0;
         uint256 amount1 = arrakisBalance1;
