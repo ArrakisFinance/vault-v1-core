@@ -18,7 +18,7 @@ import {
 /// @dev Add all inherited contracts with state vars here: APPEND ONLY
 /// @dev ERC20Upgradable Includes Initialize
 // solhint-disable-next-line max-states-count
-abstract contract GUniPoolStorage is
+abstract contract ArrakisVaultV1Storage is
     ERC20Upgradeable, /* XXXX DONT MODIFY ORDERING XXXX */
     ReentrancyGuardUpgradeable,
     OwnableUninitialized,
@@ -29,14 +29,19 @@ abstract contract GUniPoolStorage is
     // solhint-disable-next-line const-name-snakecase
     string public constant version = "1.0.0";
     // solhint-disable-next-line const-name-snakecase
-    uint16 public constant gelatoFeeBPS = 250;
+    uint16 public constant arrakisFeeBPS = 250;
+    /// @dev "restricted mint enabled" toggle value must be a number
+    // above 10000 to safely avoid collisions for repurposed state var
+    uint16 public constant RESTRICTED_MINT_ENABLED = 11111;
+
+    address public immutable arrakisTreasury;
 
     // XXXXXXXX DO NOT MODIFY ORDERING XXXXXXXX
     int24 public lowerTick;
     int24 public upperTick;
 
     uint16 public gelatoRebalanceBPS;
-    uint16 public gelatoWithdrawBPS;
+    uint16 public restrictedMintToggle;
     uint16 public gelatoSlippageBPS;
     uint32 public gelatoSlippageInterval;
 
@@ -45,8 +50,8 @@ abstract contract GUniPoolStorage is
 
     uint256 public managerBalance0;
     uint256 public managerBalance1;
-    uint256 public gelatoBalance0;
-    uint256 public gelatoBalance1;
+    uint256 public arrakisBalance0;
+    uint256 public arrakisBalance1;
 
     IUniswapV3Pool public pool;
     IERC20 public token0;
@@ -54,29 +59,26 @@ abstract contract GUniPoolStorage is
     // APPPEND ADDITIONAL STATE VARS BELOW:
     // XXXXXXXX DO NOT MODIFY ORDERING XXXXXXXX
 
-    event UpdateAdminTreasury(
-        address oldAdminTreasury,
-        address newAdminTreasury
-    );
-
-    event UpdateGelatoParams(
+    event UpdateManagerParams(
+        uint16 managerFeeBPS,
+        address managerTreasury,
         uint16 gelatoRebalanceBPS,
-        uint16 gelatoWithdrawBPS,
         uint16 gelatoSlippageBPS,
         uint32 gelatoSlippageInterval
     );
 
-    event SetManagerFee(uint16 managerFee);
-
     // solhint-disable-next-line max-line-length
-    constructor(address payable _gelato) Gelatofied(_gelato) {} // solhint-disable-line no-empty-blocks
+    constructor(address payable _gelato, address _arrakisTreasury)
+        Gelatofied(_gelato)
+    {
+        arrakisTreasury = _arrakisTreasury;
+    }
 
     /// @notice initialize storage variables on a new G-UNI pool, only called once
-    /// @param _name name of G-UNI token
-    /// @param _symbol symbol of G-UNI token
-    /// @param _pool address of Uniswap V3 pool
+    /// @param _name name of Vault (immutable)
+    /// @param _symbol symbol of Vault (immutable)
+    /// @param _pool address of Uniswap V3 pool (immutable)
     /// @param _managerFeeBPS proportion of fees earned that go to manager treasury
-    /// note that the 4 above params are NOT UPDATEABLE AFTER INILIALIZATION
     /// @param _lowerTick initial lowerTick (only changeable with executiveRebalance)
     /// @param _lowerTick initial upperTick (only changeable with executiveRebalance)
     /// @param _manager_ address of manager (ownership can be transferred)
@@ -89,74 +91,68 @@ abstract contract GUniPoolStorage is
         int24 _upperTick,
         address _manager_
     ) external initializer {
-        require(_managerFeeBPS <= 10000 - gelatoFeeBPS, "mBPS");
+        require(_managerFeeBPS <= 10000 - arrakisFeeBPS, "mBPS");
 
         // these variables are immutable after initialization
         pool = IUniswapV3Pool(_pool);
         token0 = IERC20(pool.token0());
         token1 = IERC20(pool.token1());
-        managerFeeBPS = _managerFeeBPS; // if set to 0 here manager can still initialize later
 
         // these variables can be udpated by the manager
+        _manager = _manager_;
+        managerFeeBPS = _managerFeeBPS;
+        managerTreasury = _manager_; // default: treasury is admin
         gelatoSlippageInterval = 5 minutes; // default: last five minutes;
         gelatoSlippageBPS = 500; // default: 5% slippage
-        gelatoWithdrawBPS = 100; // default: only auto withdraw if tx fee is lt 1% withdrawn
         gelatoRebalanceBPS = 200; // default: only rebalance if tx fee is lt 2% reinvested
-        managerTreasury = _manager_; // default: treasury is admin
+
         lowerTick = _lowerTick;
         upperTick = _upperTick;
-        _manager = _manager_;
 
         // e.g. "Gelato Uniswap V3 USDC/DAI LP" and "G-UNI"
         __ERC20_init(_name, _symbol);
         __ReentrancyGuard_init();
     }
 
-    /// @notice change configurable parameters, only manager can call
-    /// @param newRebalanceBPS controls frequency of gelato rebalances: gas fee to execute
-    /// rebalance can be gelatoRebalanceBPS proportion of fees earned since last rebalance
-    /// @param newWithdrawBPS controls frequency of gelato withdrawals: gas fee to execute
-    /// withdrawal can be gelatoWithdrawBPS proportion of fees accrued since last withdraw
-    /// @param newSlippageBPS maximum slippage on swaps during gelato rebalance
-    /// @param newSlippageInterval length of time for TWAP used in computing slippage on swaps
-    /// @param newTreasury address where managerFee withdrawals are sent
+    /// @notice change configurable gelato parameters, only manager can call
+    /// @param newManagerFeeBPS Basis Points of fees earned credited to manager (negative to ignore)
+    /// @param newManagerTreasury address that collects manager fees (Zero address to ignore)
+    /// @param newRebalanceBPS threshold fees earned for gelato rebalances (negative to ignore)
+    /// @param newSlippageBPS frontrun protection parameter (negative to ignore)
+    /// @param newSlippageInterval frontrun protection parameter (negative to ignore)
     // solhint-disable-next-line code-complexity
-    function updateGelatoParams(
-        uint16 newRebalanceBPS,
-        uint16 newWithdrawBPS,
-        uint16 newSlippageBPS,
-        uint32 newSlippageInterval,
-        address newTreasury
+    function updateManagerParams(
+        int16 newManagerFeeBPS,
+        address newManagerTreasury,
+        int16 newRebalanceBPS,
+        int16 newSlippageBPS,
+        int32 newSlippageInterval
     ) external onlyManager {
-        require(newWithdrawBPS <= 10000, "BPS");
         require(newRebalanceBPS <= 10000, "BPS");
         require(newSlippageBPS <= 10000, "BPS");
-        emit UpdateGelatoParams(
-            newRebalanceBPS,
-            newWithdrawBPS,
-            newSlippageBPS,
-            newSlippageInterval
+        require(newManagerFeeBPS <= 10000 - int16(arrakisFeeBPS), "mBPS");
+        if (newManagerFeeBPS >= 0) managerFeeBPS = uint16(newManagerFeeBPS);
+        if (newRebalanceBPS >= 0) gelatoRebalanceBPS = uint16(newRebalanceBPS);
+        if (newSlippageBPS >= 0) gelatoSlippageBPS = uint16(newSlippageBPS);
+        if (newSlippageInterval >= 0)
+            gelatoSlippageInterval = uint32(newSlippageInterval);
+        if (address(0) != newManagerTreasury)
+            managerTreasury = newManagerTreasury;
+        emit UpdateManagerParams(
+            managerFeeBPS,
+            managerTreasury,
+            gelatoRebalanceBPS,
+            gelatoSlippageBPS,
+            gelatoSlippageInterval
         );
-        if (newRebalanceBPS != 0) gelatoRebalanceBPS = newRebalanceBPS;
-        if (newWithdrawBPS != 0) gelatoWithdrawBPS = newWithdrawBPS;
-        if (newSlippageBPS != 0) gelatoSlippageBPS = newSlippageBPS;
-        if (newSlippageInterval != 0)
-            gelatoSlippageInterval = newSlippageInterval;
-        if (newTreasury != address(0)) managerTreasury = newTreasury;
     }
 
-    /// @notice initializeManagerFee sets a managerFee, only manager can call.
-    /// If a manager fee was not set in the initialize function it can be set here
-    /// but ONLY ONCE- after it is set to a non-zero value, managerFee can never be set again.
-    /// @param _managerFeeBPS proportion of fees earned that are credited to manager in Basis Points
-    function initializeManagerFee(uint16 _managerFeeBPS) external onlyManager {
-        require(managerFeeBPS == 0, "fee");
-        require(
-            _managerFeeBPS > 0 && _managerFeeBPS <= 10000 - gelatoFeeBPS,
-            "mBPS"
-        );
-        emit SetManagerFee(_managerFeeBPS);
-        managerFeeBPS = _managerFeeBPS;
+    function toggleRestrictMint() external onlyManager {
+        if (restrictedMintToggle == RESTRICTED_MINT_ENABLED) {
+            restrictedMintToggle = 0;
+        } else {
+            restrictedMintToggle = RESTRICTED_MINT_ENABLED;
+        }
     }
 
     function renounceOwnership() public virtual override onlyManager {

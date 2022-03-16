@@ -7,10 +7,7 @@ import {
 import {
     IUniswapV3SwapCallback
 } from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
-import {GUniPoolStorage} from "./abstract/GUniPoolStorage.sol";
-import {
-    IUniswapV3Pool
-} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {ArrakisVaultV1Storage} from "./abstract/ArrakisVaultV1Storage.sol";
 import {TickMath} from "./vendor/uniswap/TickMath.sol";
 import {
     IERC20,
@@ -22,10 +19,10 @@ import {
     LiquidityAmounts
 } from "./vendor/uniswap/LiquidityAmounts.sol";
 
-contract GUniPool is
+contract ArrakisVaultV1 is
     IUniswapV3MintCallback,
     IUniswapV3SwapCallback,
-    GUniPoolStorage
+    ArrakisVaultV1Storage
 {
     using SafeERC20 for IERC20;
     using TickMath for int24;
@@ -56,7 +53,9 @@ contract GUniPool is
     event FeesEarned(uint256 feesEarned0, uint256 feesEarned1);
 
     // solhint-disable-next-line max-line-length
-    constructor(address payable _gelato) GUniPoolStorage(_gelato) {} // solhint-disable-line no-empty-blocks
+    constructor(address payable _gelato, address _arrakisTreasury)
+        ArrakisVaultV1Storage(_gelato, _arrakisTreasury)
+    {} // solhint-disable-line no-empty-blocks
 
     /// @notice Uniswap V3 callback fn, called back on pool.mint
     function uniswapV3MintCallback(
@@ -86,10 +85,10 @@ contract GUniPool is
 
     // User functions => Should be called via a Router
 
-    /// @notice mint fungible G-UNI tokens, fractional shares of a Uniswap V3 position
+    /// @notice mint ArrakisVaultV1 Shares, fractional shares of a Uniswap V3 position/strategy
     /// @dev to compute the amouint of tokens necessary to mint `mintAmount` see getMintAmounts
-    /// @param mintAmount The number of G-UNI tokens to mint
-    /// @param receiver The account to receive the minted tokens
+    /// @param mintAmount The number of shares to mint
+    /// @param receiver The account to receive the minted shares
     /// @return amount0 amount of token0 transferred from msg.sender to mint `mintAmount`
     /// @return amount1 amount of token1 transferred from msg.sender to mint `mintAmount`
     /// @return liquidityMinted amount of liquidity added to the underlying Uniswap V3 position
@@ -104,6 +103,10 @@ contract GUniPool is
         )
     {
         require(mintAmount > 0, "mint 0");
+        require(
+            restrictedMintToggle != 11111 || msg.sender == _manager,
+            "restricted"
+        );
 
         uint256 totalSupply = totalSupply();
 
@@ -156,8 +159,8 @@ contract GUniPool is
         emit Minted(receiver, mintAmount, amount0, amount1, liquidityMinted);
     }
 
-    /// @notice burn G-UNI tokens (fractional shares of a Uniswap V3 position) and receive tokens
-    /// @param burnAmount The number of G-UNI tokens to burn
+    /// @notice burn ArrakisVaultV1 Shares (shares of a Uniswap V3 position) and receive underlying
+    /// @param burnAmount The number of shares to burn
     /// @param receiver The account to receive the underlying amounts of token0 and token1
     /// @return amount0 amount of token0 transferred to receiver for burning `burnAmount`
     /// @return amount1 amount of token1 transferred to receiver for burning `burnAmount`
@@ -195,7 +198,7 @@ contract GUniPool is
                 token0.balanceOf(address(this)) -
                     burn0 -
                     managerBalance0 -
-                    gelatoBalance0,
+                    arrakisBalance0,
                 burnAmount,
                 totalSupply
             );
@@ -205,7 +208,7 @@ contract GUniPool is
                 token1.balanceOf(address(this)) -
                     burn1 -
                     managerBalance1 -
-                    gelatoBalance1,
+                    arrakisBalance1,
                 burnAmount,
                 totalSupply
             );
@@ -262,11 +265,11 @@ contract GUniPool is
             uint256 reinvest0 =
                 token0.balanceOf(address(this)) -
                     managerBalance0 -
-                    gelatoBalance0;
+                    arrakisBalance0;
             uint256 reinvest1 =
                 token1.balanceOf(address(this)) -
                     managerBalance1 -
-                    gelatoBalance1;
+                    arrakisBalance1;
 
             _deposit(
                 newLowerTick,
@@ -319,20 +322,10 @@ contract GUniPool is
         emit Rebalance(lowerTick, upperTick, liquidity, newLiquidity);
     }
 
-    /// @notice withdraw manager fees accrued, only gelato executors can call.
-    /// Target account to receive fees is managerTreasury, alterable by manager.
-    /// Frequency of withdrawals configured with gelatoWithdrawBPS, alterable by manager.
-    function withdrawManagerBalance(uint256 feeAmount, address feeToken)
-        external
-        gelatofy(feeAmount, feeToken)
-    {
-        (uint256 amount0, uint256 amount1) =
-            _balancesToWithdraw(
-                managerBalance0,
-                managerBalance1,
-                feeAmount,
-                feeToken
-            );
+    /// @notice withdraw manager fees accrued
+    function withdrawManagerBalance() external {
+        uint256 amount0 = managerBalance0;
+        uint256 amount1 = managerBalance1;
 
         managerBalance0 = 0;
         managerBalance1 = 0;
@@ -346,65 +339,31 @@ contract GUniPool is
         }
     }
 
-    /// @notice withdraw gelato fees accrued, only gelato executors can call.
-    /// Frequency of withdrawals configured with gelatoWithdrawBPS, alterable by manager.
-    function withdrawGelatoBalance(uint256 feeAmount, address feeToken)
-        external
-        gelatofy(feeAmount, feeToken)
-    {
-        (uint256 amount0, uint256 amount1) =
-            _balancesToWithdraw(
-                gelatoBalance0,
-                gelatoBalance1,
-                feeAmount,
-                feeToken
-            );
+    /// @notice withdraw arrakis fees accrued
+    function withdrawArrakisBalance() external {
+        uint256 amount0 = arrakisBalance0;
+        uint256 amount1 = arrakisBalance1;
 
-        gelatoBalance0 = 0;
-        gelatoBalance1 = 0;
+        arrakisBalance0 = 0;
+        arrakisBalance1 = 0;
 
         if (amount0 > 0) {
-            token0.safeTransfer(GELATO, amount0);
+            token0.safeTransfer(arrakisTreasury, amount0);
         }
 
         if (amount1 > 0) {
-            token1.safeTransfer(GELATO, amount1);
-        }
-    }
-
-    function _balancesToWithdraw(
-        uint256 balance0,
-        uint256 balance1,
-        uint256 feeAmount,
-        address feeToken
-    ) internal view returns (uint256 amount0, uint256 amount1) {
-        if (feeToken == address(token0)) {
-            require(
-                (balance0 * gelatoWithdrawBPS) / 10000 >= feeAmount,
-                "high fee"
-            );
-            amount0 = balance0 - feeAmount;
-            amount1 = balance1;
-        } else if (feeToken == address(token1)) {
-            require(
-                (balance1 * gelatoWithdrawBPS) / 10000 >= feeAmount,
-                "high fee"
-            );
-            amount1 = balance1 - feeAmount;
-            amount0 = balance0;
-        } else {
-            revert("wrong token");
+            token1.safeTransfer(arrakisTreasury, amount1);
         }
     }
 
     // View functions
 
-    /// @notice compute maximum G-UNI tokens that can be minted from `amount0Max` and `amount1Max`
+    /// @notice compute maximum shares that can be minted from `amount0Max` and `amount1Max`
     /// @param amount0Max The maximum amount of token0 to forward on mint
     /// @param amount0Max The maximum amount of token1 to forward on mint
     /// @return amount0 actual amount of token0 to forward when minting `mintAmount`
     /// @return amount1 actual amount of token1 to forward when minting `mintAmount`
-    /// @return mintAmount maximum number of G-UNI tokens to mint
+    /// @return mintAmount maximum number of shares mintable
     function getMintAmounts(uint256 amount0Max, uint256 amount1Max)
         external
         view
@@ -502,12 +461,12 @@ contract GUniPool is
             fee0 +
             token0.balanceOf(address(this)) -
             managerBalance0 -
-            gelatoBalance0;
+            arrakisBalance0;
         amount1Current +=
             fee1 +
             token1.balanceOf(address(this)) -
             managerBalance1 -
-            gelatoBalance1;
+            arrakisBalance1;
     }
 
     // Private functions
@@ -522,9 +481,9 @@ contract GUniPool is
         address paymentToken
     ) private {
         uint256 leftover0 =
-            token0.balanceOf(address(this)) - managerBalance0 - gelatoBalance0;
+            token0.balanceOf(address(this)) - managerBalance0 - arrakisBalance0;
         uint256 leftover1 =
-            token1.balanceOf(address(this)) - managerBalance1 - gelatoBalance1;
+            token1.balanceOf(address(this)) - managerBalance1 - arrakisBalance1;
 
         (, , uint256 feesEarned0, uint256 feesEarned1) =
             _withdraw(lowerTick, upperTick, liquidity);
@@ -545,12 +504,12 @@ contract GUniPool is
             leftover0 =
                 token0.balanceOf(address(this)) -
                 managerBalance0 -
-                gelatoBalance0 -
+                arrakisBalance0 -
                 feeAmount;
             leftover1 =
                 token1.balanceOf(address(this)) -
                 managerBalance1 -
-                gelatoBalance1;
+                arrakisBalance1;
         } else if (paymentToken == address(token1)) {
             require(
                 (feesEarned1 * gelatoRebalanceBPS) / 10000 >= feeAmount,
@@ -559,11 +518,11 @@ contract GUniPool is
             leftover0 =
                 token0.balanceOf(address(this)) -
                 managerBalance0 -
-                gelatoBalance0;
+                arrakisBalance0;
             leftover1 =
                 token1.balanceOf(address(this)) -
                 managerBalance1 -
-                gelatoBalance1 -
+                arrakisBalance1 -
                 feeAmount;
         } else {
             revert("wrong token");
@@ -806,8 +765,8 @@ contract GUniPool is
     }
 
     function _applyFees(uint256 _fee0, uint256 _fee1) private {
-        gelatoBalance0 += (_fee0 * gelatoFeeBPS) / 10000;
-        gelatoBalance1 += (_fee1 * gelatoFeeBPS) / 10000;
+        arrakisBalance0 += (_fee0 * arrakisFeeBPS) / 10000;
+        arrakisBalance1 += (_fee1 * arrakisFeeBPS) / 10000;
         managerBalance0 += (_fee0 * managerFeeBPS) / 10000;
         managerBalance1 += (_fee1 * managerFeeBPS) / 10000;
     }
@@ -817,8 +776,8 @@ contract GUniPool is
         view
         returns (uint256 fee0, uint256 fee1)
     {
-        uint256 deduct0 = (rawFee0 * (gelatoFeeBPS + managerFeeBPS)) / 10000;
-        uint256 deduct1 = (rawFee1 * (gelatoFeeBPS + managerFeeBPS)) / 10000;
+        uint256 deduct0 = (rawFee0 * (arrakisFeeBPS + managerFeeBPS)) / 10000;
+        uint256 deduct1 = (rawFee1 * (arrakisFeeBPS + managerFeeBPS)) / 10000;
         fee0 = rawFee0 - deduct0;
         fee1 = rawFee1 - deduct1;
     }

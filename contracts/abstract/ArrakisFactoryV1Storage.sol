@@ -10,7 +10,7 @@ import {
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 // solhint-disable-next-line max-states-count
-contract GUniFactoryStorage is
+contract ArrakisFactoryV1Storage is
     OwnableUninitialized, /* XXXX DONT MODIFY ORDERING XXXX */
     Initializable
     // APPEND ADDITIONAL BASE WITH STATE VARS BELOW:
@@ -25,6 +25,7 @@ contract GUniFactoryStorage is
     EnumerableSet.AddressSet internal _deployers;
     mapping(address => EnumerableSet.AddressSet) internal _pools;
     // APPPEND ADDITIONAL STATE VARS BELOW:
+    uint256 public index;
     // XXXXXXXX DO NOT MODIFY ORDERING XXXXXXXX
 
     event UpdatePoolImplementation(
@@ -32,22 +33,15 @@ contract GUniFactoryStorage is
         address newImplementation
     );
 
-    event UpdateGelatoDeployer(
-        address previosGelatoDeployer,
-        address newGelatoDeployer
-    );
-
     constructor(address _uniswapV3Factory) {
         factory = _uniswapV3Factory;
     }
 
-    function initialize(
-        address _implementation,
-        address _gelatoDeployer,
-        address _manager_
-    ) external initializer {
+    function initialize(address _implementation, address _manager_)
+        external
+        initializer
+    {
         poolImplementation = _implementation;
-        gelatoDeployer = _gelatoDeployer;
         _manager = _manager_;
     }
 
@@ -57,13 +51,5 @@ contract GUniFactoryStorage is
     {
         emit UpdatePoolImplementation(poolImplementation, nextImplementation);
         poolImplementation = nextImplementation;
-    }
-
-    function setGelatoDeployer(address nextGelatoDeployer)
-        external
-        onlyManager
-    {
-        emit UpdateGelatoDeployer(gelatoDeployer, nextGelatoDeployer);
-        gelatoDeployer = nextGelatoDeployer;
     }
 }
