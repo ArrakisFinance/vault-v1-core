@@ -22,6 +22,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   await deploy("ArrakisFactoryV1", {
     from: deployer,
     args: [addresses.UniswapV3Factory],
+    log: hre.network.name !== "hardhat" ? true : false,
   });
 };
 

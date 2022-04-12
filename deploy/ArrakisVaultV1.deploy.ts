@@ -22,6 +22,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   await deploy("ArrakisVaultV1", {
     from: deployer,
     args: [addresses.Gelato, addresses.ArrakisFeeTreasury],
+    log: hre.network.name !== "hardhat" ? true : false,
   });
 };
 
