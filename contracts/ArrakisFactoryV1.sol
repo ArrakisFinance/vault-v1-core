@@ -24,9 +24,7 @@ contract ArrakisFactoryV1 is ArrakisFactoryV1Storage, IArrakisFactoryV1 {
         ArrakisFactoryV1Storage(_uniswapV3Factory)
     {} // solhint-disable-line no-empty-blocks
 
-    /// @notice deployVault creates a new instance of a Vault on a specified
-    /// UniswapV3Pool. The msg.sender is the initial manager of the pool and will
-    /// forever be associated with the Vault as it's `deployer`
+    /// @notice deployVault creates a new instance of a Vault on a specified UniswapV3Pool
     /// @param tokenA one of the tokens in the uniswap pair
     /// @param tokenB the other token in the uniswap pair
     /// @param uniFee fee tier of the uniswap pair

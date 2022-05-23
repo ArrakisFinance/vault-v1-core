@@ -31,6 +31,12 @@ const config: HardhatUserConfig = {
   },
 
   networks: {
+    hardhat: {
+      forking: {
+        url: `https://polygon-mainnet.alchemyapi.io/v2/${ALCHEMY_ID}`,
+        blockNumber: 28216129,
+      }
+    },
     mainnet: {
       accounts: PK ? [PK] : [],
       chainId: 1,

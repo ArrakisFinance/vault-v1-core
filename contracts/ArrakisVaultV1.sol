@@ -44,10 +44,9 @@ contract ArrakisVaultV1 is
     );
 
     event Rebalance(
-        int24 lowerTick_,
-        int24 upperTick_,
-        uint128 liquidityBefore,
-        uint128 liquidityAfter
+        int24[] lowerTicks,
+        int24[] upperTicks,
+        uint128[] liquidity
     );
 
     event FeesEarned(uint256 feesEarned0, uint256 feesEarned1);
