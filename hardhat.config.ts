@@ -5,7 +5,6 @@ import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
-import "hardhat-deploy";
 import "solidity-coverage";
 import "./lib/uniswap";
 
@@ -19,13 +18,6 @@ const PK_TEST = process.env.PK_TEST;
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
 
-  // hardhat-deploy
-  namedAccounts: {
-    deployer: {
-      default: 0,
-    },
-  },
-
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
@@ -33,8 +25,8 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: `https://polygon-mainnet.alchemyapi.io/v2/${ALCHEMY_ID}`,
-        blockNumber: 28216129,
+        url: `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_ID}`,
+        blockNumber: 27800000,
       }
     },
     mainnet: {

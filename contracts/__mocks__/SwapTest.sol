@@ -20,7 +20,7 @@ contract SwapTest is IUniswapV3SwapCallback {
             address(msg.sender),
             zeroForOne,
             amountSpecified,
-            zeroForOne ? sqrtRatio - 1000 : sqrtRatio + 1000,
+            zeroForOne ? sqrtRatio/2 : sqrtRatio + (sqrtRatio/2),
             abi.encode(msg.sender)
         );
     }
