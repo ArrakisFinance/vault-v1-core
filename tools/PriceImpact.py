@@ -326,7 +326,7 @@ def sellY(y_to_sell, token0, decimals0, token1, decimals1, feeTier, price, liqui
                     break
             start = i
     spent += fee
-    logging.info(f"{date.strftime('%Y-%m-%d %H:%M')} Bought: {bought} {token0} Spent: {spent} {token1} New Price: {p * (10 ** (decimals0 - decimals1))} @ ticks: {ticks[start]} => {ticks[i]}")
+    logging.info(f"{date.strftime('%Y-%m-%d %H:%M')} Bought: {bought} {token0} Spent: {spent} {token1} New Price: {p * (10 ** (decimals0 - decimals1))} @ ticks: {start} - {i}")
 
 def sellX(x_to_sell, token0, decimals0, token1, decimals1, feeTier, price, liquidity, date):
     
@@ -430,7 +430,7 @@ def sellX(x_to_sell, token0, decimals0, token1, decimals1, feeTier, price, liqui
             if spent >= x_to_sell:
                 break
     spent += fee
-    logging.info(f"{date.strftime('%Y-%m-%d %H:%M')} Bought: {bought} {token1} Spent: {spent} {token0} New Price: {p * (10 ** (decimals0 - decimals1))} @ ticks: {ticks[start]} => {ticks[i]}")
+    logging.info(f"{date.strftime('%Y-%m-%d %H:%M')} Bought: {bought} {token1} Spent: {spent} {token0} New Price: {p * (10 ** (decimals0 - decimals1))} @ ticks: {start} - {i}")
 
 def main():
 
@@ -475,9 +475,9 @@ def main():
         positions = mergeMintsBurns(mints, burns, timelimit)
         liquidity = getLiquidity(positions,tickSpacing)
         if args.zeroForOne == 'True':
-            sellX(args.amount, token0, decimals0, token1, decimals1, feeTier, price, liquidity, date)
+            sellX(10000, token0, decimals0, token1, decimals1, feeTier, price, liquidity, date)
         else:
-            sellY(args.amount, token0, decimals0, token1, decimals1, feeTier, price, liquidity, date)
+            sellY(100, token0, decimals0, token1, decimals1, feeTier, price, liquidity, date)
         date += datetime.timedelta(hours=1)
 
 if __name__ == '__main__':
