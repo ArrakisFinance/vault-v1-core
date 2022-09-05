@@ -46,6 +46,11 @@ const config: HardhatUserConfig = {
       chainId: 10,
       url: `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_ID}`,
     },
+    arbitrum: {
+      accounts: PK ? [PK] : [],
+      chainId: 42161,
+      url: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_ID}`,
+    },
     goerli: {
       accounts: PK_TEST ? [PK_TEST] : [],
       chainId: 5,
