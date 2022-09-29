@@ -25,6 +25,12 @@ export const getAddresses = (network: string): Addresses => {
         UniswapV3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
         ArrakisFeeTreasury: "0x8636600A864797Aa7ac8807A065C5d8BD9bA3Ccb",
       };
+    case "arbitrum":
+      return {
+        Gelato: "0x4775aF8FEf4809fE10bf05867d2b038a4b5B2146",
+        UniswapV3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+        ArrakisFeeTreasury: "0x77BADa8FC2A478f1bc1E1E4980916666187D0dF7",
+      };
     case "goerli":
       return {
         Gelato: "0x683913B3A32ada4F8100458A3E1675425BdAa7DF",
