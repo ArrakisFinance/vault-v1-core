@@ -12,8 +12,6 @@ A shared fungible (ERC20) Uniswap V3 Liquidity Position for liquidity aggregatio
 
 Vaults can be permissionlessly deployed and managed by anyone on any existing Uniswap V3 pair, via the ArrakisFactoryV1 contract. Due to sensitivity of the `manager` role, only vaults explicitly under Arrakis DAO management or without any manager can be safely trusted, in the absence of further information.
 
-(see [docs](https://docs.arrakis.fi/developer-docs) for more info)
-
 # test
 
 yarn
