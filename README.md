@@ -4,9 +4,6 @@
 remain deployed and immutable on-chain, but this codebase is frozen and will
 receive no further updates, fixes, or security patches.
 
-For current Arrakis liquidity-management contracts, see
-**[arrakis-modular](https://github.com/ArrakisFinance/arrakis-modular)**.
-
 ---
 
 # Vault V1 Core
